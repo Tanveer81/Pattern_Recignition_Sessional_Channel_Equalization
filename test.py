@@ -1,7 +1,20 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jul 12 23:03:34 2018
+import numpy
+import random
+import math
+import time
 
-@author: User
-"""
+file = open("config.txt", "r")
+layers = file.readline()
+print("Number Of Layers", end=" : ")
+print(layers)
+
+a,b  = layers.split
+
+
+
+words = 'This is random text we’re going to split apart'
+ 
+words2 = words.split(' ')
+ 
+a,b = words2
 
