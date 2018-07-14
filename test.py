@@ -2,6 +2,7 @@ import numpy
 import random
 import math
 import time
+import keras
 
 file = open("config.txt", "r")
 layers = file.readline()

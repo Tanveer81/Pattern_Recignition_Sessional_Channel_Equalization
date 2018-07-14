@@ -1,17 +1,14 @@
 import time
 import itertools
 import random
-import numpy as np
 import math
-import scipy as sc
-
+import numpy as np
 random.seed(5)
 
-global n,l,w,sigmaError,train,test,prior,trainLength,testLength,miu,lst,X
+global n,l,w,sigmaError,train,test,prior,trainLength,testLength,miu,lst,X,var
 w = []
 train = []
 test = []
-
 
 
 def readfile():
@@ -34,7 +31,7 @@ def readfile():
     
     #padding train and test with n-1 0's at start
     for i in range (0, n-1):
-        train.append(0)
+#        train.append(0)
         test.append(0)
     
     file = open("train.txt","r")
@@ -59,6 +56,14 @@ def b2d(b):
     d = int(str1, 2)
     return d    
     
+
+def normpdf(x, mean, sd):
+    var = float(sd)**2
+    pi = 3.1415926
+    denom = (2*pi*var)**.5
+    num = math.exp(-(float(x)-float(mean))**2/(2*var))
+    return num/denom
+
 
 def priorCal():   
     global n,l,w,sigmaError,train,test,trainLength,testLength,prior,xsition,lst,miu
@@ -100,44 +105,53 @@ def xsitionCal():
 
        
         
-        
-def miuCal():
-    global n,l,w,sigmaError,train,test,trainLength,testLength,prior,xsition,lst,miu
-    #    generate all bit string of classes
-    lst = list(itertools.product([0, 1], repeat=n))
-    
-#   calculate miu
-    miu = [0] * (2 ** n)
-    for i in range(0, 2**n):
-        miu[i] = sum(x * y for x, y in zip(lst[i] , w))
- 
 def calculateX():
-    global n,X,trainLength,train
+    global n,X,trainLength,train,lst
+    lst = list(itertools.product([0, 1], repeat=n))
+    X=[]
+    for i in range(0,2**n):
+        a = []
+        X.append(a)
+    
     for i in range(0, trainLength):
         binary = []
         for j in range(0,n):
             binary.append(train[i+j])
-        classNumber = b2d(binary)
+        classNumber = b2d(binary)        
+        X[classNumber].append(sum(x * y for x, y in zip(lst[classNumber] , w))+np.random.normal(0, sigmaError, 1)[0])
         
-    
+        
+        
+def miuCal():
+    global n,X,miu
+
+    miu = [0] * (2 ** n)
+    for i in range(0, 2**n):
+        if len(X[i]) !=0:
+            miu[i] = sum(X[i]) / float(len(X[i]))
+
+ 
 
 def sigmaCal():
-    print()
-    
-def nomal(x,mu,sigma):
-    pdf = (1 / (2 * math.pi * (sigma ** 2)) ** .5) * math.exp(-((x - mu) ** 2/(2 * (sigma ** 2)))
-    return pdf
+    var = []
+    for i in range(0, 2**n):
+        var.append(np.var(X[i]))
+
     
 
 def training():   
     print("Training")
     priorCal()
     xsitionCal()
-    miuCal()
     calculateX()
+    miuCal()
+    sigmaCal()
+    
+    
     
 def testing():
     print("Testing")           
+
 
 def main():
     readfile()
