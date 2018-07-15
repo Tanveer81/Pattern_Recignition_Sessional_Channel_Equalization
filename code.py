@@ -3,13 +3,13 @@ import itertools
 import random
 import math
 import numpy as np
-random.seed(5)
+random.seed(1)
 
-global n,l,w,sigmaError,train,test,prior,trainLength,testLength,miu,lst,X,var
+global n,l,w,sigmaError,sigmaError2,train,test,prior,trainLength,testLength,miu,lst,X,var,xk,graph,result
 w = []
 train = []
 test = []
-
+sigmaError2 = .225
 
 def readfile():
     global n,l,w,sigmaError,train,test,trainLength,testLength,xsition,lst,miu
@@ -31,7 +31,7 @@ def readfile():
     
     #padding train and test with n-1 0's at start
     for i in range (0, n-1):
-#        train.append(0)
+        train.append(0)
         test.append(0)
     
     file = open("train.txt","r")
@@ -75,7 +75,7 @@ def priorCal():
             binary.append(train[i+j])
         classNumber = b2d(binary)
         prior[classNumber] = prior[classNumber] + 1
-    print(prior)
+#    print(prior)
     prior = [float(i)/sum(prior) for i in prior]#normalize
    
     
@@ -106,7 +106,7 @@ def xsitionCal():
        
         
 def calculateX():
-    global n,X,trainLength,train,lst
+    global n,X,trainLength,train,lst,sigmaError2
     lst = list(itertools.product([0, 1], repeat=n))
     X=[]
     for i in range(0,2**n):
@@ -137,27 +137,103 @@ def sigmaCal():
     for i in range(0, 2**n):
         var.append(np.var(X[i]))
 
+
+def getX():
+    global n,xk,test,testLength,lst,sigmaError
+    xk = []
+    
+    for i in range(0, testLength):
+        binary = []
+        for j in range(0,n):
+            binary.append(test[i+j])
+        classNumber = b2d(binary)        
+        xk.append(sum(x * y for x, y in zip(lst[classNumber] , w))+np.random.normal(0, sigmaError, 1)[0])
     
 
+
+    
+def createGraph():
+    global graph,n,testLength,prior,miu,sigmaerror,xk
+    graph = []    
+    for i in range(0, testLength):
+        a = []
+        for j in range(0, 2**n):
+            if i == 0:
+                a.append([-1, prior[j]*normpdf(xk[i], miu[j], np.random.normal(0, sigmaError, 1)[0])])
+            else:
+                a.append([-1, normpdf(xk[i], miu[j], np.random.normal(0, sigmaError, 1)[0])])
+        graph.append(a)
+    
+def parents(classNumber):
+    return math.floor((classNumber/2)) + 2**( n-1) , math.floor((classNumber/2))   
+    
+def children(classNumber):
+    return (classNumber * 2) % (2**n) , ((classNumber * 2) % (2**n)) + 1
+
+def viterbi():
+    global graph,n,testLength,prior,miu,sigmaerror,xk,xsition
+    
+    for i in range(1, testLength):
+        for j in range(0, 2**n):
+            p1,p2 = parents(j)
+            if graph[i-1][p1][1]*xsition[p1][j] >  graph[i-1][p2][1]*xsition[p2][j]:
+                graph[i][j][0] = p1
+                graph[i][j][1] = graph[i][j][1] * graph[i-1][p1][1]*xsition[p1][j]
+            else:
+                graph[i][j][0] = p2
+                graph[i][j][1] = graph[i][j][1] * graph[i-1][p2][1]*xsition[p2][j]
+    
+def backProp():
+    global graph,n,testLength,prior,miu,sigmaerror,xk,xsition,result
+    max = 0
+    lastClass = 0
+    for i in range(0,2** n):
+        if graph[testLength - 1][i][1] > max:
+            max = graph[testLength - 1][i][1]
+            lastClass = i
+    
+    result = []
+    result.append(lastClass%2)
+    
+    xx = lastClass
+    
+    for i in range(testLength - 1 , 0, -1):
+        mp = graph[i][xx][0]
+        result.append(mp % 2)
+        xx = mp 
+    result.reverse()
+  
+    print(result)
+  
 def training():   
     print("Training")
     priorCal()
     xsitionCal()
     calculateX()
     miuCal()
-    sigmaCal()
-    
-    
+    sigmaCal()    
     
 def testing():
     print("Testing")           
+    getX()
+    createGraph()
+    viterbi()
+    backProp()
+    
+def accuracy():
+    global test,result,testLength
+    a = np.array(test[2:])
+    b = np.array(result)
+    accurate = np.sum(a == b)
+    print(accurate/testLength)    
 
-
+    
 def main():
     readfile()
     start = time.clock()
     training()
-    print(miu)
+    testing()
+    accuracy()
     end = time.clock()
     print('Time :',end - start)
 
