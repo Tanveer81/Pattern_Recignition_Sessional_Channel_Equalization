@@ -3,14 +3,15 @@ import itertools
 import random
 import math
 import numpy as np
-random.seed(1)
+from scipy.stats import norm
+
+np.random.seed(1)
 
 global n,l,w,sigmaError,sigmaError2,train,test,prior,trainLength,testLength,miu,lst,X,var,xk,graph,result
 w = []
 train = []
 test = []
-sigmaError2 = .225
-
+var = []
 def readfile():
     global n,l,w,sigmaError,train,test,trainLength,testLength,xsition,lst,miu
     
@@ -77,7 +78,8 @@ def priorCal():
         prior[classNumber] = prior[classNumber] + 1
 #    print(prior)
     prior = [float(i)/sum(prior) for i in prior]#normalize
-   
+    print("Printing Prior")
+    print(prior)
     
     
     
@@ -103,8 +105,11 @@ def xsitionCal():
         if sum(xsition[j]) != 0: 
             xsition[j] = [float(i)/sum(xsition[j]) for i in xsition[j]]#normalize
 
-       
+    print("Printing xsition")
+    print(xsition)
         
+    
+    
 def calculateX():
     global n,X,trainLength,train,lst,sigmaError2
     lst = list(itertools.product([0, 1], repeat=n))
@@ -130,10 +135,13 @@ def miuCal():
         if len(X[i]) !=0:
             miu[i] = sum(X[i]) / float(len(X[i]))
 
- 
+    print("Printing means")
+    print(miu)
+        
 
 def sigmaCal():
-    var = []
+    global n , var
+    
     for i in range(0, 2**n):
         var.append(np.var(X[i]))
 
@@ -153,22 +161,27 @@ def getX():
 
     
 def createGraph():
-    global graph,n,testLength,prior,miu,sigmaerror,xk
+    global graph,n,testLength,prior,miu,sigmaerror,xk,var
     graph = []    
     for i in range(0, testLength):
         a = []
         for j in range(0, 2**n):
+            dist = norm(miu[j], var[j])
+            p = dist.pdf(xk[i])
             if i == 0:
-                a.append([-1, prior[j]*normpdf(xk[i], miu[j], np.random.normal(0, sigmaError, 1)[0])])
+                a.append([-1, prior[j]*p])
             else:
-                a.append([-1, normpdf(xk[i], miu[j], np.random.normal(0, sigmaError, 1)[0])])
+                a.append([-1, p])
         graph.append(a)
+    
     
 def parents(classNumber):
     return math.floor((classNumber/2)) + 2**( n-1) , math.floor((classNumber/2))   
     
+
 def children(classNumber):
     return (classNumber * 2) % (2**n) , ((classNumber * 2) % (2**n)) + 1
+
 
 def viterbi():
     global graph,n,testLength,prior,miu,sigmaerror,xk,xsition
@@ -203,10 +216,10 @@ def backProp():
         xx = mp 
     result.reverse()
   
+    print("Printing Result")
     print(result)
   
 def training():   
-    print("Training")
     priorCal()
     xsitionCal()
     calculateX()
@@ -214,7 +227,6 @@ def training():
     sigmaCal()    
     
 def testing():
-    print("Testing")           
     getX()
     createGraph()
     viterbi()
@@ -225,17 +237,19 @@ def accuracy():
     a = np.array(test[2:])
     b = np.array(result)
     accurate = np.sum(a == b)
+    print("Printing Accuracy")
     print(accurate/testLength)    
 
     
 def main():
+    global sigmaError
     readfile()
-    start = time.clock()
+#    start = time.clock()
     training()
     testing()
     accuracy()
-    end = time.clock()
-    print('Time :',end - start)
+#    end = time.clock()
+#    print('Time :',end - start)
 
 
 if __name__ == "__main__":
